@@ -21,7 +21,11 @@ func TestS3OpenFile(t *testing.T) {
 		Bucket: bucket,
 	}
 
-	file, err := AppFs.Open("files/1.jpg")
+	file, err := AppFs.Open("path/to/file")
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	if e, _ := file.Stat(); e == nil {
 		t.Error("Corrupted file read")

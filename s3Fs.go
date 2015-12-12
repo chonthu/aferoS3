@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/mem"
 	"io"
+	"io/ioutil"
+	"mime"
 	"os"
 	"strings"
 	"time"
@@ -60,6 +62,15 @@ func (s S3Fs) Open(name string) (afero.File, error) {
 	return memFile, err
 }
 
+func (s S3Fs) Push(f afero.File, path string) error {
+
+	body, err := ioutil.ReadAll(f)
+
+	s.Bucket.Put(path, body, mime.TypeByExtension(path), "")
+
+	return err
+}
+
 func getNameFromPath(fileName string) string {
 	var name string
 	tokens := strings.Split(fileName, ".")
@@ -76,16 +87,18 @@ func getNameFromPath(fileName string) string {
 
 type S3FileInfo struct {
 	os.FileInfo
-	file *os.File
+	file *afero.File
 }
 
 // Maybe different between Open is its torrent, and this is the actuall file
 func (s S3Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
-	return S3File{}, nil
+	file, err := s.Open(name)
+	s.Chmod(name, perm)
+	return file, err
 }
 
 // Set ACL Perms
-func (S3Fs) Chmod(name string, mode os.FileMode) error {
+func (s S3Fs) Chmod(name string, mode os.FileMode) error {
 	return nil
 }
 
@@ -94,8 +107,8 @@ func (S3Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 }
 
 func (s S3Fs) Stat(name string) (os.FileInfo, error) {
-	// get Head prefill file info?
-	return S3FileInfo{}, nil
+	f, err := s.Open(name)
+	return S3FileInfo{file: &f}, err
 }
 
 // Renames a file
