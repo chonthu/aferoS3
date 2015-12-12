@@ -1,0 +1,110 @@
+package remote
+
+import (
+	"fmt"
+	"github.com/mitchellh/goamz/s3"
+	"github.com/spf13/afero"
+	"github.com/spf13/afero/mem"
+	"io"
+	"os"
+	"strings"
+	"time"
+)
+
+/*
+
+I think here I should create a s3 to file system mapping?
+
+Example:
+
+	"private":                   600,
+	"public-read":               664,
+	"public-read-write":         666,
+	"authenticated-read":        660,
+	"bucket-owner-read":         660,
+	"bucket-owner-full-control": 666,
+
+*/
+
+type S3Fs struct {
+	Bucket *s3.Bucket
+}
+
+type S3File struct {
+	*mem.File
+}
+
+func (S3Fs) Name() string {
+	return "S3Fs"
+}
+
+// Create a empty file in Memmory? maybe use Memfile here?
+func (S3Fs) Create(name string) (afero.File, error) {
+	return S3File{}, nil
+}
+
+// Read from s3, and bring down whole file? or torrent?
+func (s S3Fs) Open(name string) (afero.File, error) {
+	torrentReader, err := s.Bucket.GetTorrentReader(name)
+	memFile := mem.CreateFile(getNameFromPath(name))
+	if err != nil {
+		if _, err = io.Copy(memFile, torrentReader); err != nil {
+			return memFile, err
+		}
+	}
+	return memFile, err
+}
+
+func getNameFromPath(fileName string) string {
+	var name string
+	tokens := strings.Split(fileName, ".")
+	ext := tokens[len(tokens)-1]
+
+	if len(tokens) > 2 {
+		name = strings.Join(tokens[:len(tokens)-1], ".")
+	} else {
+		name = tokens[0]
+	}
+
+	return fmt.Sprintf("%s.%s", name, ext)
+}
+
+type S3FileInfo struct {
+	os.FileInfo
+	file *os.File
+}
+
+// Maybe different between Open is its torrent, and this is the actuall file
+func (s S3Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	return S3File{}, nil
+}
+
+// Set ACL Perms
+func (s S3Fs) Chmod(name string, mode os.FileMode) error {
+	return nil
+}
+
+func (s S3Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return nil
+}
+
+//
+func (s S3Fs) Stat(name string) (os.FileInfo, error) {
+	// get Head prefill file info?
+	return S3FileInfo{}, nil
+}
+
+// Renames a file
+func (s S3Fs) Rename(oldname, newname string) error {
+	return s.Bucket.Copy(oldname, newname, s3.ACL(""))
+}
+
+// Removes a file
+func (s S3Fs) Remove(name string) error {
+	return s.Bucket.Del(name)
+}
+
+// Dont think we can do much here
+func (s S3Fs) Mkdir(name string, perm os.FileMode) error    { return nil }
+func (s S3Fs) MkdirAll(path string, perm os.FileMode) error { return nil }
+func (s S3Fs) RemoveAll(path string) error                  { return nil }
