@@ -38,15 +38,20 @@ func (S3Fs) Name() string {
 	return "S3Fs"
 }
 
-// Create a empty file in Memmory? maybe use Memfile here?
 func (S3Fs) Create(name string) (afero.File, error) {
 	return S3File{}, nil
 }
 
 // Read from s3, and bring down whole file? or torrent?
 func (s S3Fs) Open(name string) (afero.File, error) {
-	torrentReader, err := s.Bucket.GetTorrentReader(name)
+
 	memFile := mem.CreateFile(getNameFromPath(name))
+
+	torrentReader, err := s.Bucket.GetTorrentReader(name)
+	if err != nil {
+		return memFile, err
+	}
+
 	if err != nil {
 		if _, err = io.Copy(memFile, torrentReader); err != nil {
 			return memFile, err
@@ -80,15 +85,14 @@ func (s S3Fs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, err
 }
 
 // Set ACL Perms
-func (s S3Fs) Chmod(name string, mode os.FileMode) error {
+func (S3Fs) Chmod(name string, mode os.FileMode) error {
 	return nil
 }
 
-func (s S3Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
+func (S3Fs) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return nil
 }
 
-//
 func (s S3Fs) Stat(name string) (os.FileInfo, error) {
 	// get Head prefill file info?
 	return S3FileInfo{}, nil
@@ -105,6 +109,6 @@ func (s S3Fs) Remove(name string) error {
 }
 
 // Dont think we can do much here
-func (s S3Fs) Mkdir(name string, perm os.FileMode) error    { return nil }
-func (s S3Fs) MkdirAll(path string, perm os.FileMode) error { return nil }
-func (s S3Fs) RemoveAll(path string) error                  { return nil }
+func (S3Fs) Mkdir(name string, perm os.FileMode) error    { return nil }
+func (S3Fs) MkdirAll(path string, perm os.FileMode) error { return nil }
+func (S3Fs) RemoveAll(path string) error                  { return nil }
