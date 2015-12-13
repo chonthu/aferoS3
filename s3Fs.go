@@ -1,11 +1,10 @@
-package remote
+package aferoS3
 
 import (
 	"fmt"
 	"github.com/mitchellh/goamz/s3"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/mem"
-	"io"
 	"io/ioutil"
 	"mime"
 	"os"
@@ -32,33 +31,29 @@ type S3Fs struct {
 	Bucket *s3.Bucket
 }
 
-type S3File struct {
-	*mem.File
-}
-
 func (S3Fs) Name() string {
 	return "S3Fs"
 }
 
 func (S3Fs) Create(name string) (afero.File, error) {
-	return S3File{}, nil
+	return mem.CreateFile(name), nil
 }
 
 // Read from s3, and bring down whole file? or torrent?
 func (s S3Fs) Open(name string) (afero.File, error) {
 
-	memFile := mem.CreateFile(getNameFromPath(name))
+	memFile, err := s.Create(getNameFromPath(name))
+	if err != nil {
+		return nil, err
+	}
 
-	torrentReader, err := s.Bucket.GetTorrentReader(name)
+	torrent, err := s.Bucket.GetTorrent(name)
 	if err != nil {
 		return memFile, err
 	}
 
-	if err != nil {
-		if _, err = io.Copy(memFile, torrentReader); err != nil {
-			return memFile, err
-		}
-	}
+	memFile.Write(torrent)
+
 	return memFile, err
 }
 
@@ -66,7 +61,9 @@ func (s S3Fs) Push(f afero.File, path string) error {
 
 	body, err := ioutil.ReadAll(f)
 
-	s.Bucket.Put(path, body, mime.TypeByExtension(path), "")
+	if err != nil {
+		s.Bucket.Put(path, body, mime.TypeByExtension(path), "")
+	}
 
 	return err
 }
