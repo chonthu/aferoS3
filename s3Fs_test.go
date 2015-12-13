@@ -1,4 +1,4 @@
-package remote
+package aferoS3
 
 import (
 	"github.com/mitchellh/goamz/aws"
@@ -30,4 +30,8 @@ func TestS3OpenFile(t *testing.T) {
 	if e, _ := file.Stat(); e == nil {
 		t.Error("Corrupted file read")
 	}
+
+	var OsFs afero.Fs = afero.OsFs{}
+	newFile, err := OsFs.Create("output.jpg")
+	io.Copy(newFile, file)
 }
