@@ -2,6 +2,7 @@ package aferoS3
 
 import (
 	"fmt"
+	"github.com/mitchellh/goamz/aws"
 	"github.com/mitchellh/goamz/s3"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/mem"
@@ -29,6 +30,34 @@ Example:
 
 type S3Fs struct {
 	Bucket *s3.Bucket
+	auth   *aws.Auth
+}
+
+var USEast = aws.USEast
+var USGovWest = aws.USGovWest
+var USWest = aws.USWest
+var USWest2 = aws.USWest2
+var EUWest = aws.EUWest
+var EUCentral = aws.EUCentral
+var APSoutheast = aws.APSoutheast
+var APSoutheast2 = aws.APSoutheast2
+var APNortheast = aws.APNortheast
+var SAEast = aws.SAEast
+var CNNorth = aws.CNNorth
+
+func GetBucket(name string, region aws.Region) (afero.Fs, error) {
+	a, err := aws.EnvAuth()
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.New(a, region)
+	bucket := client.Bucket(name)
+
+	return S3Fs{
+		Bucket: bucket,
+		auth:   &a,
+	}, nil
 }
 
 func (S3Fs) Name() string {

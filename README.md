@@ -2,24 +2,22 @@
 
 Afero S3 is a Afero FS interface for Amazon s3
 
+## Install
+
+	go get github.com/spf13/afero
+	go get github.com/chonthu/aferoS3
+
 ## How to use
 
-	auth, err := aws.EnvAuth()
+	afero.Fs, err := aferoS3.GetBucket("bucket_name", aferoS3.USEast)
 	if err != nil {
-		t.Fatal(err)
+		fmt.Println(err)
+		return
 	}
 
-	client := s3.New(auth, aws.USEast)
-	bucket := client.Bucket("spin.com")
-
-	var AppFs afero.Fs = S3Fs{
-		Bucket: bucket,
-	}
-
-	file, err := AppFs.Open("files/00-01-spin-cover.jpg")
+	file, err := S3Fs.Open("path/to/file.jpg")
 
 	if err != nil {
-		t.Error(err)
+		fmt.Println(err)
+		return
 	}
-
-	fmt.Println(file)
