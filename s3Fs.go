@@ -199,8 +199,22 @@ func (s S3Fs) ReadDir(dirname string) ([]string, error) {
 }
 
 // ReadDirNames(n int) : []string, error
+
 // DirExists(path string) (bool, error)
-// Exists(path string) (bool, error)
+
+// Exists checks if object exsists
+func (s S3Fs) Exists(path string) (bool, error) {
+
+	_, err := s.client.GetObject(&s3.GetObjectInput{
+		Bucket: aws.String(s.Bucket),
+		Key:    aws.String(path),
+	})
+
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 // IsDir check if this is a valid directory
 func (s S3Fs) IsDir(path string) (bool, error) {
