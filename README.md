@@ -32,3 +32,11 @@ Afero S3 is a Afero FS interface for Amazon s3
 		fmt.Println(err)
 		return
 	}
+
+## License
+
+This project uses the https://github.com/aws/aws-sdk-go, thanks amazon web services for the great library
+
+This SDK is distributed under the
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0),
+see LICENSE.txt and NOTICE.txt for more information.
