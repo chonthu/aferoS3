@@ -60,7 +60,7 @@ func TestCreate(t *testing.T) {
 // TestName() : string
 func TestName(t *testing.T) {
 	appFs := NewS3Fs(setup(), "bucket_name")
-	if appFs.Name() != "S#Fs" {
+	if appFs.Name() != "S3Fs" {
 		t.Fatal("unknown module name")
 	}
 }
