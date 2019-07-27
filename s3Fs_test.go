@@ -1,37 +1,108 @@
 package aferoS3
 
 import (
-	"github.com/mitchellh/goamz/aws"
-	"github.com/mitchellh/goamz/s3"
-	"github.com/spf13/afero"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 )
 
-func TestS3OpenFile(t *testing.T) {
+// hold aws sesssion in mem
+var sess *session.Session
 
-	auth, err := aws.EnvAuth()
+// setup return a aws session, doesnt recreate if exisits
+func setup() *session.Session {
+
+	if sess == nil {
+
+		// server is the mock server that simply writes a 200 status back to the client
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}))
+
+		return session.Must(session.NewSession(&aws.Config{
+			DisableSSL:  aws.Bool(true),
+			Endpoint:    aws.String(server.URL),
+			Credentials: credentials.NewStaticCredentials("AKID", "SECRET", "SESSION"),
+			Region:      aws.String("mock-region"),
+		}))
+	}
+
+	return sess
+}
+
+// TestChmod(name string, mode os.FileMode) : error
+// TestChtimes(name string, atime time.Time, mtime time.Time) : error
+// TestCreate(name string) : File, error
+func TestCreate(t *testing.T) {
+	appFs := NewS3Fs(setup(), "bucket_name")
+
+	file, err := appFs.Create("output.jpg")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	client := s3.New(auth, aws.USEast)
-	bucket := client.Bucket("bucket_name")
-
-	var AppFs afero.Fs = S3Fs{
-		Bucket: bucket,
-	}
-
-	file, err := AppFs.Open("path/to/file")
-
+	info, err := file.Stat()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
-	if e, _ := file.Stat(); e == nil {
-		t.Error("Corrupted file read")
+	if info.Name() != "output.jpg" {
+		t.Fatal("couldnt open file")
 	}
-
-	var OsFs afero.Fs = afero.OsFs{}
-	newFile, err := OsFs.Create("output.jpg")
-	io.Copy(newFile, file)
 }
+
+// TestMkdir(name string, perm os.FileMode) : error
+// TestMkdirAll(path string, perm os.FileMode) : error
+// TestName() : string
+func TestName(t *testing.T) {
+	appFs := NewS3Fs(setup(), "bucket_name")
+	if appFs.Name() != "S3Fs" {
+		t.Fatal("unknown module name")
+	}
+}
+
+// TestOpen(name string) : File, error
+func TestOpen(t *testing.T) {
+	appFs := NewS3Fs(setup(), "bucket_name")
+	file, err := appFs.Open("output.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if info.Name() != "output.jpg" {
+		t.Fatal("couldnt open file")
+	}
+}
+
+// TestOpenFile(name string, flag int, perm os.FileMode) : File, error
+func TestS3OpenFile(t *testing.T) {
+	appFs := NewS3Fs(setup(), "bucket_name")
+
+	file, err := appFs.OpenFile("output.jpg", 0, 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if info.Name() != "output.jpg" {
+		t.Fatal("couldnt open file")
+	}
+}
+
+// TestRemove(name string) : error
+// TestRemoveAll(path string) : error
+// TestRename(oldname, newname string) : error
+// TestStat(name string) : os.FileInfo, error
